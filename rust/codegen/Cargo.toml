@@ -10,4 +10,4 @@ edition = "2018"
 bytes = "1.0.1"
 prost = "0.14.3"
 prost-build = "0.14.3"
-informalsystems-pbjson-build = { path = "../../../pbjson/pbjson-build" }
+informalsystems-pbjson-build = { git = "https://github.com/permissionlessweb/pbjson", branch = "zk-mvp" }
