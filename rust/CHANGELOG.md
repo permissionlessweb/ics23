@@ -2,6 +2,7 @@
 
 # Unreleased
 
+- feat(rust): export `blake3_iavl_spec()` and treat it as IAVL-like in prefix checks (inner hash SHA-256 or BLAKE3).
 - fix: guarantee that `spec.InnerSpec.MaxPrefixLength` < `spec.InnerSpec.MinPrefixLength` + `spec.InnerSpec.ChildSize` ([#369](https://github.com/cosmos/ics23/pull/369))
 
 # v0.12.0

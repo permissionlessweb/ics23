@@ -25,6 +25,30 @@ var IavlSpec = &ProofSpec{
 	},
 }
 
+// Blake3IavlSpec is IAVL leaf/inner layout with BLAKE3-256 instead of SHA-256.
+// Same prefix/varint encoding and 32-byte children as IavlSpec.
+var Blake3IavlSpec = &ProofSpec{
+	LeafSpec: &LeafOp{
+		Prefix:       []byte{0},
+		PrehashKey:   HashOp_NO_HASH,
+		Hash:         HashOp_BLAKE3,
+		PrehashValue: HashOp_BLAKE3,
+		Length:       LengthOp_VAR_PROTO,
+	},
+	InnerSpec: &InnerSpec{
+		ChildOrder:      []int32{0, 1},
+		MinPrefixLength: 4,
+		MaxPrefixLength: 12,
+		ChildSize:       33,
+		EmptyChild:      nil,
+		Hash:            HashOp_BLAKE3,
+	},
+}
+
+func isIavlLikeSpec(spec *ProofSpec) bool {
+	return spec.SpecEquals(IavlSpec) || spec.SpecEquals(Blake3IavlSpec)
+}
+
 // TendermintSpec constrains the format from proofs-tendermint (crypto/merkle SimpleProof)
 var TendermintSpec = &ProofSpec{
 	LeafSpec: &LeafOp{
