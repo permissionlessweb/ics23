@@ -12,6 +12,7 @@ func BenchmarkDoHash(b *testing.B) {
 	}{
 		{"sha256", HashOp_SHA256},
 		{"blake2s", HashOp_BLAKE2S_256},
+		{"blake2b256", HashOp_BLAKE2B_256},
 		{"blake3", HashOp_BLAKE3},
 	}
 	sizes := []int{32, 64, 75, 256}

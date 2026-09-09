@@ -45,8 +45,31 @@ var Blake3IavlSpec = &ProofSpec{
 	},
 }
 
+func isIavlHashOp(h HashOp) bool {
+	return h == HashOp_SHA256 || h == HashOp_BLAKE3 || h == HashOp_BLAKE2B_256
+}
+
 func isIavlLikeSpec(spec *ProofSpec) bool {
-	return spec.SpecEquals(IavlSpec) || spec.SpecEquals(Blake3IavlSpec)
+	return spec.SpecEquals(IavlSpec) || spec.SpecEquals(Blake3IavlSpec) || spec.SpecEquals(Blake2b256IavlSpec)
+}
+
+// Blake2b256IavlSpec is IAVL leaf/inner layout with BLAKE2b-256 instead of SHA-256.
+var Blake2b256IavlSpec = &ProofSpec{
+	LeafSpec: &LeafOp{
+		Prefix:       []byte{0},
+		PrehashKey:   HashOp_NO_HASH,
+		Hash:         HashOp_BLAKE2B_256,
+		PrehashValue: HashOp_BLAKE2B_256,
+		Length:       LengthOp_VAR_PROTO,
+	},
+	InnerSpec: &InnerSpec{
+		ChildOrder:      []int32{0, 1},
+		MinPrefixLength: 4,
+		MaxPrefixLength: 12,
+		ChildSize:       33,
+		EmptyChild:      nil,
+		Hash:            HashOp_BLAKE2B_256,
+	},
 }
 
 // TendermintSpec constrains the format from proofs-tendermint (crypto/merkle SimpleProof)

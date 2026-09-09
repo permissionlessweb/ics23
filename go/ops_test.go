@@ -98,12 +98,19 @@ func TestValidateIavlOps(t *testing.T) {
 			func() {
 				op.(*InnerOp).Hash = HashOp_NO_HASH
 			},
-			fmt.Errorf("IAVL hash op must be SHA256 or BLAKE3, got %v", HashOp_NO_HASH),
+			fmt.Errorf("IAVL hash op must be SHA256, BLAKE3, or BLAKE2B_256, got %v", HashOp_NO_HASH),
 		},
 		{
 			"success: blake3 inner hash",
 			func() {
 				op.(*InnerOp).Hash = HashOp_BLAKE3
+			},
+			nil,
+		},
+		{
+			"success: blake2b-256 inner hash",
+			func() {
+				op.(*InnerOp).Hash = HashOp_BLAKE2B_256
 			},
 			nil,
 		},
@@ -283,6 +290,21 @@ func TestBlake3IavlSpecMatchesLayout(t *testing.T) {
 	}
 	if !isIavlLikeSpec(Blake3IavlSpec) || !isIavlLikeSpec(IavlSpec) {
 		t.Fatal("both IAVL specs must share prefix validation")
+	}
+}
+
+func TestBlake2b256IavlSpecMatchesLayout(t *testing.T) {
+	if Blake2b256IavlSpec.LeafSpec.Hash != HashOp_BLAKE2B_256 {
+		t.Fatalf("leaf hash %v", Blake2b256IavlSpec.LeafSpec.Hash)
+	}
+	if Blake2b256IavlSpec.InnerSpec.ChildSize != IavlSpec.InnerSpec.ChildSize {
+		t.Fatal("child size must match SHA-256 IAVL")
+	}
+	if IavlSpec.SpecEquals(Blake2b256IavlSpec) || Blake3IavlSpec.SpecEquals(Blake2b256IavlSpec) {
+		t.Fatal("IAVL hash-op specs must not compare equal")
+	}
+	if !isIavlLikeSpec(Blake2b256IavlSpec) {
+		t.Fatal("BLAKE2b-256 IAVL spec must share prefix validation")
 	}
 }
 

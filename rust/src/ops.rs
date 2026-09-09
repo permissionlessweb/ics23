@@ -49,6 +49,7 @@ pub(crate) fn do_hash<H: HostFunctionsProvider>(hash: HashOp, data: &[u8]) -> Ha
         HashOp::Blake2b512 => Hash::from(H::blake2b_512(data)),
         HashOp::Blake2s256 => Hash::from(H::blake2s_256(data)),
         HashOp::Blake3 => Hash::from(H::blake3(data)),
+        HashOp::Blake2b256 => Hash::from(H::blake2b_256(data)),
     }
 }
 
@@ -156,6 +157,12 @@ mod tests {
         assert!(
             hash == decode("f775a8ccf8cb78cd1c63ade4e9802de4ead836b36cea35242accf31d2c6a3697"),
             "blake3 hash fails"
+        );
+
+        let hash = do_hash::<HostFunctionsManager>(HashOp::Blake2b256, b"food");
+        assert!(
+            hash == decode("7f7644ce3090805c7a7ef48b4852234df35a3ed4a26de3efab4d3838c1022268"),
+            "blake2b-256 hash fails"
         );
 
         let hash = do_hash::<HostFunctionsManager>(HashOp::Keccak256, b"food");

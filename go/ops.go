@@ -12,8 +12,8 @@ import (
 	_ "crypto/sha256"
 	// adds sha512 capability to crypto.SHA512
 	_ "crypto/sha512"
-	// adds blake2b capability to crypto.BLAKE2b_512
-	_ "golang.org/x/crypto/blake2b"
+	// adds blake2b capability to crypto.BLAKE2b_512; New256 for HashOp_BLAKE2B_256
+	"golang.org/x/crypto/blake2b"
 	// adds blake2s capability to crypto.BLAKE2s_256
 	_ "golang.org/x/crypto/blake2s"
 	// adds ripemd160 capability to crypto.RIPEMD160
@@ -80,8 +80,8 @@ func validateIavlOps(op opType, layerNum int) error {
 			return fmt.Errorf("remainder of prefix must be of length 1 or 34, got: %d", remLen)
 		}
 		h := op.GetHash()
-		if h != HashOp_SHA256 && h != HashOp_BLAKE3 {
-			return fmt.Errorf("IAVL hash op must be SHA256 or BLAKE3, got %v", h)
+		if !isIavlHashOp(h) {
+			return fmt.Errorf("IAVL hash op must be SHA256, BLAKE3, or BLAKE2B_256, got %v", h)
 		}
 	}
 	return nil
@@ -263,6 +263,16 @@ func doHash(hashOp HashOp, preimage []byte) ([]byte, error) {
 		out := make([]byte, 32)
 		copy(out, sum[:])
 		return out, nil
+	case HashOp_BLAKE2B_256:
+		h, err := blake2b.New256(nil)
+		if err != nil {
+			return nil, err
+		}
+		_, err = h.Write(preimage)
+		if err != nil {
+			return nil, err
+		}
+		return h.Sum(nil), nil
 	}
 	return nil, fmt.Errorf("unsupported hashop: %d", hashOp)
 }
