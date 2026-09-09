@@ -2,6 +2,8 @@
 
 # Unreleased
 
+- feat(rust): export `blake3_iavl_spec()` and treat it as IAVL-like in prefix checks (inner hash SHA-256 or BLAKE3).
+- feat(rust): `HashOp::Blake2b256` (enum 10), host `blake2b_256`, and `blake2b256_iavl_spec()`.
 - fix: guarantee that `spec.InnerSpec.MaxPrefixLength` < `spec.InnerSpec.MinPrefixLength` + `spec.InnerSpec.ChildSize` ([#369](https://github.com/cosmos/ics23/pull/369))
 
 # v0.12.0
