@@ -1,5 +1,6 @@
 use alloc::collections::btree_map::BTreeMap;
 use alloc::vec;
+use alloc::vec::Vec;
 
 use anyhow::{anyhow, ensure};
 use bytes::{Buf, Bytes};
@@ -39,6 +40,29 @@ pub fn verify_membership<H: HostFunctionsProvider>(
     } else {
         false
     }
+}
+
+/// One-pass membership: spec + `apply_leaf`/`apply_inner` (`HashOp` on each op).
+/// Returns the calculated root, or `None` if the proof is not an existence proof
+/// for `key`/`value`.
+pub fn membership_root<H: HostFunctionsProvider>(
+    proof: &ics23::CommitmentProof,
+    spec: &ics23::ProofSpec,
+    key: &[u8],
+    value: &[u8],
+) -> Option<Vec<u8>> {
+    let mut proof = proof;
+    let my_proof;
+    if is_compressed(proof) {
+        if let Ok(p) = decompress(proof) {
+            my_proof = p;
+            proof = &my_proof;
+        } else {
+            return None;
+        }
+    }
+    let ex = get_exist_proof(proof, key)?;
+    crate::verify::verified_existence_root::<H>(ex, spec, key, value).ok()
 }
 
 // Use CommitmentRoot vs &[u8] to stick with ics naming
@@ -504,6 +528,10 @@ mod tests {
                 &proof, spec, &data.root, &data.key, &value,
             );
             ensure!(valid, "invalid test vector");
+            let got = membership_root::<HostFunctionsManager>(
+                &proof, spec, &data.key, &value,
+            );
+            ensure!(got.as_ref() == Some(&data.root), "membership_root != vector root");
             Ok(())
         } else {
             let valid =
