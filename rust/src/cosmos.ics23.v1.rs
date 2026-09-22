@@ -281,6 +281,7 @@ pub enum HashOp {
     Blake2b512 = 7,
     Blake2s256 = 8,
     Blake3 = 9,
+    Blake2b256 = 10,
 }
 impl HashOp {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -299,6 +300,7 @@ impl HashOp {
             HashOp::Blake2b512 => "BLAKE2B_512",
             HashOp::Blake2s256 => "BLAKE2S_256",
             HashOp::Blake3 => "BLAKE3",
+            HashOp::Blake2b256 => "BLAKE2B_256",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -314,6 +316,7 @@ impl HashOp {
             "BLAKE2B_512" => Some(Self::Blake2b512),
             "BLAKE2S_256" => Some(Self::Blake2s256),
             "BLAKE3" => Some(Self::Blake3),
+            "BLAKE2B_256" => Some(Self::Blake2b256),
             _ => None,
         }
     }

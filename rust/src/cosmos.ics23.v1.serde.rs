@@ -995,6 +995,7 @@ impl serde::Serialize for HashOp {
             Self::Blake2b512 => "BLAKE2B_512",
             Self::Blake2s256 => "BLAKE2S_256",
             Self::Blake3 => "BLAKE3",
+            Self::Blake2b256 => "BLAKE2B_256",
         };
         serializer.serialize_str(variant)
     }
@@ -1016,6 +1017,7 @@ impl<'de> serde::Deserialize<'de> for HashOp {
             "BLAKE2B_512",
             "BLAKE2S_256",
             "BLAKE3",
+            "BLAKE2B_256",
         ];
 
         struct GeneratedVisitor;
@@ -1066,6 +1068,7 @@ impl<'de> serde::Deserialize<'de> for HashOp {
                     "BLAKE2B_512" => Ok(HashOp::Blake2b512),
                     "BLAKE2S_256" => Ok(HashOp::Blake2s256),
                     "BLAKE3" => Ok(HashOp::Blake3),
+                    "BLAKE2B_256" => Ok(HashOp::Blake2b256),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }
