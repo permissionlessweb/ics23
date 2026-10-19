@@ -25,12 +25,17 @@ pub trait HostFunctionsProvider {
 
     /// BLAKE3 hash function.
     fn blake3(message: &[u8]) -> [u8; 32];
+
+    /// BLAKE2b-256 hash function (BLAKE2b with 32-byte digest).
+    fn blake2b_256(message: &[u8]) -> [u8; 32];
 }
 
 #[cfg(any(feature = "host-functions", test))]
 pub mod host_functions_impl {
     use crate::host_functions::HostFunctionsProvider;
-    use blake2::{Blake2b512, Blake2s256};
+    use blake2::{
+        Blake2b512, Blake2s256, digest::consts::U32, Blake2b,
+    };
     use ripemd::Ripemd160;
     use sha2::{Digest, Sha256, Sha512, Sha512_256};
     use sha3::Keccak256;
@@ -88,6 +93,13 @@ pub mod host_functions_impl {
 
         fn blake3(message: &[u8]) -> [u8; 32] {
             blake3::hash(message).into()
+        }
+
+        fn blake2b_256(message: &[u8]) -> [u8; 32] {
+            let digest = Blake2b::<U32>::digest(message);
+            let mut buf = [0u8; 32];
+            buf.copy_from_slice(&digest);
+            buf
         }
     }
 }

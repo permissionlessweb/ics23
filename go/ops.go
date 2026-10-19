@@ -12,12 +12,14 @@ import (
 	_ "crypto/sha256"
 	// adds sha512 capability to crypto.SHA512
 	_ "crypto/sha512"
-	// adds blake2b capability to crypto.BLAKE2b_512
-	_ "golang.org/x/crypto/blake2b"
+	// adds blake2b capability to crypto.BLAKE2b_512; New256 for HashOp_BLAKE2B_256
+	"golang.org/x/crypto/blake2b"
 	// adds blake2s capability to crypto.BLAKE2s_256
 	_ "golang.org/x/crypto/blake2s"
 	// adds ripemd160 capability to crypto.RIPEMD160
 	_ "golang.org/x/crypto/ripemd160" //nolint:staticcheck
+
+	"github.com/zeebo/blake3"
 )
 
 // validateIavlOps validates the prefix to ensure it begins with
@@ -77,8 +79,9 @@ func validateIavlOps(op opType, layerNum int) error {
 		if remLen != 1 && remLen != 34 {
 			return fmt.Errorf("remainder of prefix must be of length 1 or 34, got: %d", remLen)
 		}
-		if op.GetHash() != HashOp_SHA256 {
-			return fmt.Errorf("IAVL hash op must be %v", HashOp_SHA256)
+		h := op.GetHash()
+		if !isIavlHashOp(h) {
+			return fmt.Errorf("IAVL hash op must be SHA256, BLAKE3, or BLAKE2B_256, got %v", h)
 		}
 	}
 	return nil
@@ -149,7 +152,7 @@ func (op *LeafOp) CheckAgainstSpec(spec *ProofSpec) error {
 		return errors.New("spec.LeafSpec must be non-nil")
 	}
 
-	if spec.SpecEquals(IavlSpec) {
+	if isIavlLikeSpec(spec) {
 		err := validateIavlOps(op, 0)
 		if err != nil {
 			return err
@@ -190,7 +193,7 @@ func (op *InnerOp) CheckAgainstSpec(spec *ProofSpec, b int) error {
 		return fmt.Errorf("unexpected HashOp: %d", op.Hash)
 	}
 
-	if spec.SpecEquals(IavlSpec) {
+	if isIavlLikeSpec(spec) {
 		err := validateIavlOps(op, b)
 		if err != nil {
 			return err
@@ -255,6 +258,21 @@ func doHash(hashOp HashOp, preimage []byte) ([]byte, error) {
 		return hashBz(crypto.BLAKE2b_512, preimage)
 	case HashOp_BLAKE2S_256:
 		return hashBz(crypto.BLAKE2s_256, preimage)
+	case HashOp_BLAKE3:
+		sum := blake3.Sum256(preimage)
+		out := make([]byte, 32)
+		copy(out, sum[:])
+		return out, nil
+	case HashOp_BLAKE2B_256:
+		h, err := blake2b.New256(nil)
+		if err != nil {
+			return nil, err
+		}
+		_, err = h.Write(preimage)
+		if err != nil {
+			return nil, err
+		}
+		return h.Sum(nil), nil
 	}
 	return nil, fmt.Errorf("unsupported hashop: %d", hashOp)
 }

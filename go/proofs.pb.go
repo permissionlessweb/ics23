@@ -36,6 +36,7 @@ const (
 	HashOp_BLAKE2B_512 HashOp = 7
 	HashOp_BLAKE2S_256 HashOp = 8
 	HashOp_BLAKE3      HashOp = 9
+	HashOp_BLAKE2B_256 HashOp = 10
 )
 
 var HashOp_name = map[int32]string{
@@ -46,9 +47,10 @@ var HashOp_name = map[int32]string{
 	4: "RIPEMD160",
 	5: "BITCOIN",
 	6: "SHA512_256",
-	7: "BLAKE2B_512",
-	8: "BLAKE2S_256",
-	9: "BLAKE3",
+	7:  "BLAKE2B_512",
+	8:  "BLAKE2S_256",
+	9:  "BLAKE3",
+	10: "BLAKE2B_256",
 }
 
 var HashOp_value = map[string]int32{
@@ -62,6 +64,7 @@ var HashOp_value = map[string]int32{
 	"BLAKE2B_512": 7,
 	"BLAKE2S_256": 8,
 	"BLAKE3":      9,
+	"BLAKE2B_256": 10,
 }
 
 func (x HashOp) String() string {

@@ -1,5 +1,6 @@
 use alloc::collections::btree_map::BTreeMap;
 use alloc::vec;
+use alloc::vec::Vec;
 
 use anyhow::{anyhow, ensure};
 use bytes::{Buf, Bytes};
@@ -39,6 +40,29 @@ pub fn verify_membership<H: HostFunctionsProvider>(
     } else {
         false
     }
+}
+
+/// One-pass membership: spec + `apply_leaf`/`apply_inner` (`HashOp` on each op).
+/// Returns the calculated root, or `None` if the proof is not an existence proof
+/// for `key`/`value`.
+pub fn membership_root<H: HostFunctionsProvider>(
+    proof: &ics23::CommitmentProof,
+    spec: &ics23::ProofSpec,
+    key: &[u8],
+    value: &[u8],
+) -> Option<Vec<u8>> {
+    let mut proof = proof;
+    let my_proof;
+    if is_compressed(proof) {
+        if let Ok(p) = decompress(proof) {
+            my_proof = p;
+            proof = &my_proof;
+        } else {
+            return None;
+        }
+    }
+    let ex = get_exist_proof(proof, key)?;
+    crate::verify::verified_existence_root::<H>(ex, spec, key, value).ok()
 }
 
 // Use CommitmentRoot vs &[u8] to stick with ics naming
@@ -220,6 +244,59 @@ pub fn iavl_spec() -> ics23::ProofSpec {
     }
 }
 
+/// IAVL leaf/inner layout with BLAKE3-256 instead of SHA-256.
+/// Same prefix/varint encoding and 32-byte children as [`iavl_spec`].
+pub fn blake3_iavl_spec() -> ics23::ProofSpec {
+    let leaf = ics23::LeafOp {
+        hash: ics23::HashOp::Blake3.into(),
+        prehash_key: 0,
+        prehash_value: ics23::HashOp::Blake3.into(),
+        length: ics23::LengthOp::VarProto.into(),
+        prefix: vec![0_u8],
+    };
+    let inner = ics23::InnerSpec {
+        child_order: vec![0, 1],
+        min_prefix_length: 4,
+        max_prefix_length: 12,
+        child_size: 33,
+        empty_child: vec![],
+        hash: ics23::HashOp::Blake3.into(),
+    };
+    ics23::ProofSpec {
+        leaf_spec: Some(leaf),
+        inner_spec: Some(inner),
+        min_depth: 0,
+        max_depth: 0,
+        prehash_key_before_comparison: false,
+    }
+}
+
+/// IAVL leaf/inner layout with BLAKE2b-256 instead of SHA-256.
+pub fn blake2b256_iavl_spec() -> ics23::ProofSpec {
+    let leaf = ics23::LeafOp {
+        hash: ics23::HashOp::Blake2b256.into(),
+        prehash_key: 0,
+        prehash_value: ics23::HashOp::Blake2b256.into(),
+        length: ics23::LengthOp::VarProto.into(),
+        prefix: vec![0_u8],
+    };
+    let inner = ics23::InnerSpec {
+        child_order: vec![0, 1],
+        min_prefix_length: 4,
+        max_prefix_length: 12,
+        child_size: 33,
+        empty_child: vec![],
+        hash: ics23::HashOp::Blake2b256.into(),
+    };
+    ics23::ProofSpec {
+        leaf_spec: Some(leaf),
+        inner_spec: Some(inner),
+        min_depth: 0,
+        max_depth: 0,
+        prehash_key_before_comparison: false,
+    }
+}
+
 fn read_varint<B: Buf>(buf: &mut B) -> Option<i64> {
     let ux = prost::encoding::decode_varint(buf).ok()?;
     let mut x: i64 = (ux >> 1).try_into().ok()?;
@@ -248,8 +325,9 @@ fn ensure_iavl_prefix(prefix: &[u8], min_height: i64) -> Result<Option<usize>> {
 }
 
 fn is_iavl_spec(spec: &ics23::ProofSpec) -> bool {
-    // we use a relaxed impl that over-declares equality
     spec_equals(spec, &iavl_spec())
+        || spec_equals(spec, &blake3_iavl_spec())
+        || spec_equals(spec, &blake2b256_iavl_spec())
 }
 
 fn spec_equals(left: &ics23::ProofSpec, right: &ics23::ProofSpec) -> bool {
@@ -323,7 +401,12 @@ pub(crate) fn ensure_inner_prefix(
                 "bad prefix in layer {}",
                 min_height
             );
-            ensure!(hash_op == ics23::HashOp::Sha256 as i32, "bad hash op");
+            ensure!(
+                hash_op == ics23::HashOp::Sha256 as i32
+                    || hash_op == ics23::HashOp::Blake3 as i32
+                    || hash_op == ics23::HashOp::Blake2b256 as i32,
+                "bad hash op"
+            );
             Ok(())
         }
     }
@@ -445,6 +528,10 @@ mod tests {
                 &proof, spec, &data.root, &data.key, &value,
             );
             ensure!(valid, "invalid test vector");
+            let got = membership_root::<HostFunctionsManager>(
+                &proof, spec, &data.key, &value,
+            );
+            ensure!(got.as_ref() == Some(&data.root), "membership_root != vector root");
             Ok(())
         } else {
             let valid =
@@ -877,5 +964,42 @@ mod tests {
         }
 
         Ok(())
+    }
+
+    #[test]
+    fn blake3_iavl_spec_matches_layout() {
+        let sha = iavl_spec();
+        let b3 = blake3_iavl_spec();
+        assert_eq!(
+            b3.leaf_spec.as_ref().unwrap().hash,
+            ics23::HashOp::Blake3 as i32
+        );
+        assert_eq!(
+            b3.inner_spec.as_ref().unwrap().hash,
+            ics23::HashOp::Blake3 as i32
+        );
+        assert_eq!(
+            b3.inner_spec.as_ref().unwrap().child_size,
+            sha.inner_spec.as_ref().unwrap().child_size
+        );
+        assert!(!spec_equals(&sha, &b3));
+        assert!(is_iavl_spec(&sha));
+        assert!(is_iavl_spec(&b3));
+    }
+
+    #[test]
+    fn blake2b256_iavl_spec_matches_layout() {
+        let sha = iavl_spec();
+        let b2 = blake2b256_iavl_spec();
+        assert_eq!(
+            b2.leaf_spec.as_ref().unwrap().hash,
+            ics23::HashOp::Blake2b256 as i32
+        );
+        assert_eq!(
+            b2.inner_spec.as_ref().unwrap().child_size,
+            sha.inner_spec.as_ref().unwrap().child_size
+        );
+        assert!(!spec_equals(&sha, &b2));
+        assert!(is_iavl_spec(&b2));
     }
 }

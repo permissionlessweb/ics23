@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 resolver = "2"
 
-[dependencies]
-ics23 = { git = "https://github.com/permissionlessweb/ics23", branch = "zk-mvp", default-features = false }
-
 [features]
 panic-handler = []
+
+[dependencies]
+ics23 = { path = "..", default-features = false }

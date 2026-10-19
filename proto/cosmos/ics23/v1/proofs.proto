@@ -16,6 +16,7 @@ enum HashOp {
   BLAKE2B_512 = 7;
   BLAKE2S_256 = 8;
   BLAKE3      = 9;
+  BLAKE2B_256 = 10; // BLAKE2b truncated to 256 bits (common in state trees)
 }
 
 /**

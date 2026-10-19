@@ -15,6 +15,20 @@ use crate::ops::{apply_inner, apply_leaf};
 
 pub type CommitmentRoot = Vec<u8>;
 
+/// Spec + key/value check, then a single InnerOp/LeafOp hash walk.
+/// Returns the calculated root (callers compare to a header or feed the next layer).
+pub fn verified_existence_root<H: HostFunctionsProvider>(
+    proof: &ics23::ExistenceProof,
+    spec: &ics23::ProofSpec,
+    key: &[u8],
+    value: &[u8],
+) -> Result<CommitmentRoot> {
+    check_existence_spec(proof, spec)?;
+    ensure!(proof.key == key, "Provided key doesn't match proof");
+    ensure!(proof.value == value, "Provided value doesn't match proof");
+    calculate_existence_root_for_spec::<H>(proof, Some(spec))
+}
+
 pub fn verify_existence<H: HostFunctionsProvider>(
     proof: &ics23::ExistenceProof,
     spec: &ics23::ProofSpec,
@@ -22,11 +36,7 @@ pub fn verify_existence<H: HostFunctionsProvider>(
     key: &[u8],
     value: &[u8],
 ) -> Result<()> {
-    check_existence_spec(proof, spec)?;
-    ensure!(proof.key == key, "Provided key doesn't match proof");
-    ensure!(proof.value == value, "Provided value doesn't match proof");
-
-    let calc = calculate_existence_root_for_spec::<H>(proof, Some(spec))?;
+    let calc = verified_existence_root::<H>(proof, spec, key, value)?;
     ensure!(calc == root, "Root hash doesn't match");
     Ok(())
 }

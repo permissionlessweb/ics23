@@ -2,6 +2,10 @@
 
 # Unreleased
 
+- feat(go): implement `HashOp_BLAKE3` in `doHash` (proto enum 9) via `github.com/zeebo/blake3`.
+- feat(go): add `HashOp_BLAKE2B_256` (proto enum 10) and `Blake2b256IavlSpec` for 32-byte BLAKE2b trees.
+- feat(go): add `Blake3IavlSpec` (IAVL layout, BLAKE3-256) and treat it as IAVL-like for prefix checks.
+- test(go): BLAKE3 `food` vector matching Rust; `BenchmarkDoHash` covers sha256/blake2s/blake3 at 32/64/75/256 B.
 - deps: bump golang to v1.22 ([#363](https://github.com/cosmos/ics23/pull/363)).
 - fix: guarantee that `spec.InnerSpec.MaxPrefixLength` < `spec.InnerSpec.MinPrefixLength` + `spec.InnerSpec.ChildSize` ([#369](https://github.com/cosmos/ics23/pull/369))
 - fix: return error instead of panic in `getPosition` which results in error returns from `IsLeftMost`, `IsRightMost`, `IsLeftNeighbor`, `leftBranchesAreEmpty`, `rightBranchesAreEmpty`, and `getPadding`
